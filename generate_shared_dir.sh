@@ -1,0 +1,35 @@
+#!/bin/bash
+
+# Check if argument is provided
+if [ $# -ne 1 ]; then
+    echo "Usage: $0 <client_number>"
+    exit 1
+fi
+
+# Extract client number from argument
+client_number=$1
+
+# Directory where shared directory will be created
+SHARED_DIR="SHARED_DIR"
+
+# Create shared directory if it doesn't exist
+if [ ! -d "$SHARED_DIR" ]; then
+    mkdir "$SHARED_DIR"
+fi
+
+# Create client directory
+client_dir="${SHARED_DIR}/Client${client_number}"
+mkdir -p "$client_dir"
+
+# Generate random number of files
+num_files=$((1 + RANDOM % 20))  # Adjust the range as needed
+for ((i = 1; i <= num_files; i++)); do
+    # Generate a random filename
+    filename="file${client_number}_$i"
+    # Generate random file size in MB (between 1 MB and 100 MB)
+    random_size=$((RANDOM % 100 + 1))
+    # Create a file with random size
+    dd if=/dev/zero of="${client_dir}/${filename}" bs=1M count=$random_size &>/dev/null
+done
+
+echo "Shared directory and client directory created successfully."
