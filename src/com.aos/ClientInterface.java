@@ -2,15 +2,20 @@ package com.aos;
 
 import java.io.*;
 import java.nio.file.Files;
+import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Scanner;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.*;
 
 public class ClientInterface implements PeerDownloadInterface {
@@ -35,7 +40,7 @@ public class ClientInterface implements PeerDownloadInterface {
 
         FileHandler fileHandler = null;
         try {
-            fileHandler = new FileHandler("logfile_ClientInterface.log");
+            fileHandler = new FileHandler("logfile.log");
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -315,19 +320,70 @@ public class ClientInterface implements PeerDownloadInterface {
         System.out.println("Number of chunks = " + numChunks);
         logger.info("Number of chunks = " + numChunks);
         ExecutorService executor = Executors.newFixedThreadPool(peerNodes.size()); // Create thread pool
+        // Create a map to store downloaded chunks from each peer
+        ConcurrentHashMap<Integer, byte[]> chunkMap = new ConcurrentHashMap<>();
 
+        //##########################################################################
+        // Download chunks from each peer in parallel
         for (int chunkNumber = 0; chunkNumber < numChunks; chunkNumber++) {
-            int peerIndex = chunkNumber % peerNodes.size(); // Get index of peer node for this chunk
+            final int chunkIndex = chunkNumber; // Current chunk index
+            executor.execute(() -> {
+                System.out.println("File download in process...");
+                try {
+                    // Get reference to the peer node registry
+                    ArrayList<String> peerNode = peerNodes.get(chunkIndex % peerNodes.size()); // Select peer node in round-robin fashion
+                    //0 filename, 1 peerid, 2 port_num, 3 direct
+                    Registry registry = LocateRegistry.getRegistry("localhost", Integer.parseInt(peerNode.get(2)));
+                    PeerDownloadInterface pdInter = (PeerDownloadInterface) registry.lookup("root://PeerTest/" + peerNode.get(2) + "/FS");
 
-            // Calculate start offset and end offset for this chunk
-            long startOffset = chunkNumber * CHUNK_SIZE;
-            long endOffset = Math.min(startOffset + CHUNK_SIZE, fileSize);
-            int chunkSize = (int) (endOffset - startOffset);
+                    // Calculate start offset and end offset for this chunk
+                    long startOffset = chunkIndex * (long) CHUNK_SIZE;
+                    long endOffset = Math.min(startOffset + CHUNK_SIZE, fileSize);
+                    int chunkSize = (int) (endOffset - startOffset);
 
-            executor.execute(new DownloadTask(peerNodes.get(peerIndex), fileName, startOffset, chunkSize, isInter, dirName));
+                    // Download chunk from peer
+                    byte[] chunkData = pdInter.downloadChunk(fileName, startOffset, chunkSize, peerNode.get(3));
+                    System.out.println("Chunk " + chunkIndex + " downloaded successfully");
+                    logger.info(chunkData.length + " downloaded from peer " + peerNode.get(1));
+                    chunkMap.put(chunkIndex, chunkData); // Store downloaded chunk in map
+                } catch (Exception e) {
+                    logger.log(Level.SEVERE, "Error downloading chunk", e);
+                }
+            });
         }
-        System.out.println("File download in process...");
         executor.shutdown(); // Shutdown executor after all tasks are completed
+        try {
+            // Wait for all tasks to complete
+            executor.awaitTermination(Long.MAX_VALUE, TimeUnit.MILLISECONDS);
+
+            // Assemble downloaded chunks into a single file
+            try (FileOutputStream outputStream = new FileOutputStream(dirName + File.separator + fileName)) {
+                for (int chunkIndex = 0; chunkIndex < numChunks; chunkIndex++) {
+                    byte[] chunkData = chunkMap.get(chunkIndex);
+                    if (chunkData != null) {
+                        outputStream.write(chunkData);
+                        System.out.println("Chunk " + chunkIndex + " downloaded successfully");
+                    } else {
+                        System.out.println("Chunk " + chunkIndex + " not found");
+                    }
+                }
+            }
+
+            System.out.println("File downloaded successfully from multiple peers.");
+            logger.info("File downloaded successfully from multiple peers.");
+            // Update IndexServer indexes after downloading the file
+            isInter.registryFiles("new", fileName, peerNodes.get(0).get(1), peerNodes.get(0).get(2), dirName, fileSize);
+            // Check integrity of downloaded file
+            boolean integrityCheck = checkIntegrity(dirName + File.separator + fileName, peerNodes.get(0));
+            if (integrityCheck) {
+                System.out.println("Integrity check passed: Downloaded file matches the original file.");
+            } else {
+                System.out.println("Integrity check failed: Downloaded file does not match the original file.");
+                // Handle integrity check failure...
+            }
+        } catch (InterruptedException | IOException e) {
+            logger.log(Level.SEVERE, "Error assembling file", e);
+        }
     }
 
     // Implementation of the downloadChunk method
@@ -378,8 +434,39 @@ public class ClientInterface implements PeerDownloadInterface {
         return new byte[0];
     }
 
+    private boolean checkIntegrity(String downloadedFilePath, ArrayList<String> peerNode) {
+        try {
+            // Calculate checksum of the downloaded file
+            FileInputStream fis = new FileInputStream(downloadedFilePath);
+            MessageDigest md = MessageDigest.getInstance("MD5");
+            byte[] buffer = new byte[8192];
+            int bytesRead;
+            while ((bytesRead = fis.read(buffer)) != -1) {
+                md.update(buffer, 0, bytesRead);
+            }
+            fis.close();
+            byte[] downloadedChecksum = md.digest();
+
+            // Calculate checksum of the original file
+            Registry registry = LocateRegistry.getRegistry("localhost", Integer.parseInt(peerNode.get(2)));
+            PeerDownloadInterface pdInter = (PeerDownloadInterface) registry.lookup("root://PeerTest/" + peerNode.get(2) + "/FS");
+            byte[] output = pdInter.fileDownload(peerNode);
+            MessageDigest originalMd = MessageDigest.getInstance("MD5");
+            originalMd.update(output);
+            byte[] originalChecksum = originalMd.digest();
+
+            // Compare checksums
+            return MessageDigest.isEqual(downloadedChecksum, originalChecksum);
+        } catch (IOException | NoSuchAlgorithmException e) {
+            Logger.getLogger(ClientInterface.class.getName()).log(Level.SEVERE, "Error checking integrity", e);
+            return false; // Integrity check failed due to exception
+        } catch (NotBoundException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     // Download task class for downloading a chunk from a peer node
-    private static class DownloadTask implements Runnable {
+   /* private static class DownloadTask implements Runnable {
         private ArrayList<String> peerNode;
         private String fileName;
         private long startOffset;
@@ -414,7 +501,7 @@ public class ClientInterface implements PeerDownloadInterface {
                     try {
                         ostream = new FileOutputStream(peerDir + File.separator + fileName);
                         ostream.write(chunkData);
-                        System.out.println(chunkData.length + " bytes downloaded from " + peerNode.get(3));
+                        logger.info(chunkData.length + " bytes downloaded from " + peerNode.get(3));
                         //Updating the IndexServer Indexes after downloading the file.
                         isInter.registryFiles("new", fileName, peerNode.get(1), peerNode.get(2), peerDir, chunkData.length);
                     } catch (Exception e) {
@@ -432,5 +519,5 @@ public class ClientInterface implements PeerDownloadInterface {
                 //e.printStackTrace();
             }
         }
-    }
+    }*/
 }
