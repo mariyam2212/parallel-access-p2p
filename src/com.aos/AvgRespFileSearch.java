@@ -28,7 +28,7 @@ public class AvgRespFileSearch implements Runnable, PeerDownloadInterface {
     public void doWork() {
         try {
             // Locating Registry of Indexing Server and obtains target address
-            Registry regis = LocateRegistry.getRegistry("localhost", 3455);
+            Registry regis = LocateRegistry.getRegistry("localhost", 3788);
             IndexServerInterface isInter = (IndexServerInterface) regis.lookup("Indexing");
 
             Scanner sc = new Scanner(System.in);

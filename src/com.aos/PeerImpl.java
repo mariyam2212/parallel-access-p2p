@@ -18,16 +18,16 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.*;
 
-public class ClientInterface implements PeerDownloadInterface {
+public class PeerImpl implements PeerDownloadInterface {
     String portNo = null; // Port no. of the peer
     String dirName = null; //Directory where the files are to be stored.
     String fileName = null; //the file to be searched.
     String remotePeer = null; //Peer from whom file has to be downloaded.
     Collection<ArrayList<String>> colArr;
-    private static final Logger logger = Logger.getLogger(ClientInterface.class.getName());
+    private static final Logger logger = Logger.getLogger(PeerImpl.class.getName());
     private static final int CHUNK_SIZE = 64 * 1024; // Chunk size in bytes
 
-    ClientInterface(String portNo, String dirName) {
+    PeerImpl(String portNo, String dirName) {
         this.portNo = portNo;
         this.dirName = dirName;
 
@@ -54,7 +54,7 @@ public class ClientInterface implements PeerDownloadInterface {
         String peerID = null; //peerID
         try {
             // Locating Registry of Indexing Server and obtains target address
-            Registry regis = LocateRegistry.getRegistry("localhost", 3455);
+            Registry regis = LocateRegistry.getRegistry("localhost", 3788);
             IndexServerInterface isInter = (IndexServerInterface) regis.lookup("Indexing");
             Scanner sc = new Scanner(System.in);
             System.out.println("Give a Peer ID to this Peer");
@@ -131,7 +131,7 @@ public class ClientInterface implements PeerDownloadInterface {
                                         PeerDownloadInterface pdInter = (PeerDownloadInterface) regis2.lookup("root://PeerTest/" + als.get(2) + "/FS");
                                         // Calling Remote File Download method of Selected Peer
                                         byte[] output = pdInter.fileDownload(als);
-                                        //System.out.println("Size of file requested: " + output.length / 1024 + "KB / " + output.length / 1024 / 1024 + "MB");
+                                        System.out.println("Size of file requested: " + output.length / 1024 + "KB / " + output.length / 1024 / 1024 + "MB");
                                         logger.log(Level.INFO, "Size of file requested: " + output.length / 1024 + "KB / " + output.length / 1024 / 1024 + "MB");
                                         // Converting Downloaded byte array into file
                                         if (output.length != 0) {
@@ -183,7 +183,7 @@ public class ClientInterface implements PeerDownloadInterface {
         String peerID = null; //peerID
         try {
             // Locating Registry of Indexing Server and obtains target address
-            Registry regis = LocateRegistry.getRegistry("localhost", 3455);
+            Registry regis = LocateRegistry.getRegistry("localhost", 3788);
             IndexServerInterface isInter = (IndexServerInterface) regis.lookup("Indexing");
             Scanner sc = new Scanner(System.in);
             System.out.println("Give a Peer ID to this Peer");
@@ -304,7 +304,7 @@ public class ClientInterface implements PeerDownloadInterface {
         // als.get(4) gives filesize
         long fileSize = Long.valueOf(als.get(4));
         logger.log(Level.INFO, "size of file in first peer in bytes : " + fileSize);
-        //System.out.println("Size of file requested: " + fileSize / 1024L + " KB / " + fileSize / 1024L / 1024L + " MB");
+        System.out.println("Size of file requested: " + fileSize / 1024L + " KB / " + fileSize / 1024L / 1024L + " MB");
         logger.log(Level.INFO, "Size of file requested: " + fileSize / 1024L + " KB / " + fileSize / 1024L / 1024L + " MB");
 
         try {
@@ -458,7 +458,7 @@ public class ClientInterface implements PeerDownloadInterface {
             // Compare checksums
             return MessageDigest.isEqual(downloadedChecksum, originalChecksum);
         } catch (IOException | NoSuchAlgorithmException e) {
-            Logger.getLogger(ClientInterface.class.getName()).log(Level.SEVERE, "Error checking integrity", e);
+            Logger.getLogger(PeerImpl.class.getName()).log(Level.SEVERE, "Error checking integrity", e);
             return false; // Integrity check failed due to exception
         } catch (NotBoundException e) {
             throw new RuntimeException(e);

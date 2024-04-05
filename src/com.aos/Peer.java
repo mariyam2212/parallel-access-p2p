@@ -21,7 +21,7 @@ public interface Peer {
 
         // Registering the peer on specified port & setting up the remote object
         Registry registry = LocateRegistry.createRegistry(Integer.parseInt(portno));
-        ClientInterface ciImpl = new ClientInterface(portno, directoryName);
+        PeerImpl ciImpl = new PeerImpl(portno, directoryName);
         PeerDownloadInterface pdInter = (PeerDownloadInterface) UnicastRemoteObject.exportObject(ciImpl, 0);
         registry.rebind("root://PeerTest/" + portno + "/FS", pdInter);
         System.out.println("********** PEER CLIENT STARTED **********");
