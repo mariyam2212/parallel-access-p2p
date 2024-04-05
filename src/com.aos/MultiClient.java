@@ -1,9 +1,6 @@
 package com.aos;
 
-import java.io.File;
 import java.io.IOException;
-import java.rmi.Naming;
-import java.rmi.Remote;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
@@ -25,7 +22,7 @@ public static void main(String [] args) throws IOException{
 			String directoryName1 = sc.nextLine();
 			try{ 
 				Registry registry = LocateRegistry.createRegistry(Integer.parseInt(clientPortno1));
-				AvgRespFileSearch c=new AvgRespFileSearch(clientPortno1,directoryName1,"Peer1");
+				EvalResp c=new EvalResp(clientPortno1,directoryName1,"Peer1");
 				PeerDownloadInterface pdInter = (PeerDownloadInterface) UnicastRemoteObject.exportObject(c,0);
 				registry.rebind("root://PeerTest/"+clientPortno1+"/FS", pdInter);
 				c.doWork();
@@ -61,11 +58,11 @@ public static void main(String [] args) throws IOException{
 		    	 registry1 = LocateRegistry.createRegistry(Integer.parseInt(clientPortno4));
 		    	 registry1 = LocateRegistry.createRegistry(Integer.parseInt(clientPortno5));
 		    	 
-		    	 AvgRespFileSearch c1=new AvgRespFileSearch(clientPortno1,directoryName1,"Peer1");
-		    	 AvgRespFileSearch c2=new AvgRespFileSearch(clientPortno2,directoryName2,"Peer2");
-		    	 AvgRespFileSearch c3=new AvgRespFileSearch(clientPortno3,directoryName3,"Peer3");
-		         AvgRespFileSearch c4=new AvgRespFileSearch(clientPortno4,directoryName4,"Peer4");
-		         AvgRespFileSearch c5=new AvgRespFileSearch(clientPortno5,directoryName5,"Peer5");
+		    	 EvalResp c1=new EvalResp(clientPortno1,directoryName1,"Peer1");
+		    	 EvalResp c2=new EvalResp(clientPortno2,directoryName2,"Peer2");
+		    	 EvalResp c3=new EvalResp(clientPortno3,directoryName3,"Peer3");
+		         EvalResp c4=new EvalResp(clientPortno4,directoryName4,"Peer4");
+		         EvalResp c5=new EvalResp(clientPortno5,directoryName5,"Peer5");
 		         
 		         PeerDownloadInterface pdInter1 = (PeerDownloadInterface) UnicastRemoteObject.exportObject(c1,0);
 		         PeerDownloadInterface pdInter2 = (PeerDownloadInterface) UnicastRemoteObject.exportObject(c2,0);

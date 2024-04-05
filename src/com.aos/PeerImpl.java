@@ -22,10 +22,14 @@ public class PeerImpl implements PeerDownloadInterface {
     String portNo = null; // Port no. of the peer
     String dirName = null; //Directory where the files are to be stored.
     String fileName = null; //the file to be searched.
+    Long fileSize = null; //the file to be searched.
     String remotePeer = null; //Peer from whom file has to be downloaded.
     Collection<ArrayList<String>> colArr;
     private static final Logger logger = Logger.getLogger(PeerImpl.class.getName());
     private static final int CHUNK_SIZE = 64 * 1024; // Chunk size in bytes
+    long start = 0;
+    long end = 0;
+    long responseTime = 0;
 
     PeerImpl(String portNo, String dirName) {
         this.portNo = portNo;
@@ -252,7 +256,17 @@ public class PeerImpl implements PeerDownloadInterface {
 
                             // Parallel Logic: Downloading the file from all Peers holding the file
                             List<ArrayList<String>> peerList = new ArrayList<>(colArr);
+                            start = System.nanoTime();
+                            System.out.println("start is: " + start);
                             fileDownloadInParallelWrapper(peerList, fileName, isInter);
+                            end = System.nanoTime();
+                            System.out.println("end is: " + end);
+                            responseTime = (end - start) / 1000000; // Milliseconds
+                            System.out.println("ResponseTime for PeerID " + peerID + " is " + responseTime + " ms");
+
+                            // Calculate transfer speed in MB/s
+                            double transferSpeedInMBps = fileSize / 1024L / 1024L / responseTime / 1000;
+                            System.out.println("ResponseTime for PeerID " + peerID + " is " + transferSpeedInMBps + " MB/s");
                             break;
                         } else {
                             System.out.println("Queried file not found with the Indexing Server");
@@ -302,7 +316,7 @@ public class PeerImpl implements PeerDownloadInterface {
         ArrayList<String> als = peerList.stream().findFirst().orElse(new ArrayList<>());
         logger.log(Level.INFO, "first peer info" + als.get(0) + " " + als.get(1) + " " + als.get(2) + " " + als.get(3) + " " + als.get(4));
         // als.get(4) gives filesize
-        long fileSize = Long.valueOf(als.get(4));
+        fileSize = Long.valueOf(als.get(4));
         logger.log(Level.INFO, "size of file in first peer in bytes : " + fileSize);
         System.out.println("Size of file requested: " + fileSize / 1024L + " KB / " + fileSize / 1024L / 1024L + " MB");
         logger.log(Level.INFO, "Size of file requested: " + fileSize / 1024L + " KB / " + fileSize / 1024L / 1024L + " MB");
@@ -343,7 +357,6 @@ public class PeerImpl implements PeerDownloadInterface {
 
                     // Download chunk from peer
                     byte[] chunkData = pdInter.downloadChunk(fileName, startOffset, chunkSize, peerNode.get(3));
-                    System.out.println("Chunk " + chunkIndex + " downloaded successfully");
                     logger.info(chunkData.length + " downloaded from peer " + peerNode.get(1));
                     chunkMap.put(chunkIndex, chunkData); // Store downloaded chunk in map
                 } catch (Exception e) {

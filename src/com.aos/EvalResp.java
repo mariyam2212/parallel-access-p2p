@@ -8,7 +8,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Scanner;
 
-public class AvgRespFileSearch implements Runnable, PeerDownloadInterface {
+public class EvalResp implements Runnable, PeerDownloadInterface {
     String portNo = null;
     String dirName = null;
     String peerID = null;
@@ -17,7 +17,7 @@ public class AvgRespFileSearch implements Runnable, PeerDownloadInterface {
     long start = 0;
     long end = 0;
     long responseTime = 0;
-    int seqReq = 500;
+    int seqReq = 10;
 
     @Override
     public void run() {
@@ -74,7 +74,7 @@ public class AvgRespFileSearch implements Runnable, PeerDownloadInterface {
     }
 
     // Initializing the variables with the help of constructors
-    AvgRespFileSearch(String portNo, String dirName, String peerId) {
+    EvalResp(String portNo, String dirName, String peerId) {
         this.portNo = portNo;
         this.dirName = dirName;
         this.peerID = peerId;
