@@ -2,12 +2,12 @@
 
 # Check if argument is provided
 if [ $# -ne 1 ]; then
-    echo "Usage: $0 <client_number>"
+    echo "Usage: $0 <number_of_directories>"
     exit 1
 fi
+#How many directories you want to create
+number_of_directories=$1
 
-# Extract client number from argument
-client_number=$1
 
 # Directory where shared directory will be created
 SHARED_DIR="SHARED_DIR"
@@ -17,19 +17,23 @@ if [ ! -d "$SHARED_DIR" ]; then
     mkdir "$SHARED_DIR"
 fi
 
-# Create client directory
-client_dir="${SHARED_DIR}/Client${client_number}"
-mkdir -p "$client_dir"
+for ((n = 1; n <= number_of_directories; n++)); do
+  # Create client directory
+  client_dir="${SHARED_DIR}/folder${n}"
+  mkdir -p "$client_dir"
 
-# Generate random number of files
-num_files=$((1 + RANDOM % 20))  # Adjust the range as needed
-for ((i = 1; i <= num_files; i++)); do
-    # Generate a random filename
-    filename="file${client_number}_$i"
-    # Generate random file size in MB (between 1 MB and 100 MB)
-    random_size=$((RANDOM % 100 + 1))
-    # Create a file with random size
-    dd if=/dev/zero of="${client_dir}/${filename}" bs=1M count=$random_size &>/dev/null
+  # Generate random number of files
+  num_files=$((1 + RANDOM % 20))  # Adjust the range as needed
+  for ((i = 1; i <= num_files; i++)); do
+      # Generate a random filename
+      filename="file${n}_$i"
+      # Generate random file size in MB (between 1 MB and 100 MB)
+      random_size=$((RANDOM % 100 + 1))
+      # Generate random file size in KB (between 1 MB and 100 MB)
+         # random_size=$((RANDOM % 200 + 64))
+      # Create a file with random size
+      dd if=/dev/zero of="${client_dir}/${filename}" bs=1M count=$random_size &>/dev/null
+  done
 done
 
 echo "Shared directory and client directory created successfully."

@@ -9,7 +9,7 @@ public class IndexServer {
 
 	public static void main(String[] args) throws RemoteException {
 	     // Registering the Index Server on hard-coded port and setting up the remote object 
- 			 Registry registry = LocateRegistry.createRegistry(3455);
+ 			 Registry registry = LocateRegistry.createRegistry(3788);
 			 IndexServerImpl isImpl = new IndexServerImpl();
 			 IndexServerInterface isInter = (IndexServerInterface)UnicastRemoteObject.exportObject(isImpl, 0);
 			 registry.rebind("Indexing", isInter);
